@@ -7,3 +7,4 @@ max_iter = 10;
 % unconstrained_opt(f,grad_f,Hf,x0,max_iter,0.01,'NR',2);
 
 X = readtable('co2_weekly_mlo.txt');
+
