@@ -28,19 +28,19 @@ def numpy_mult(x,A):
 @jit(nopython=True, parallel=False)    
 def numba_jit_mult(x,A):        
     H, K  = A.shape 
-    y = np.zeros(K)
+    y = np.zeros(K, dtype=np.float64)
     for n in range(H):
         for k in range(K):
             y[k] += x[0,n]*A[n,k]
     return y
 
 
-@vectorize(['float32(float32, float32)'], target='cpu')
+@vectorize(['float64(float64, float64)'], target='cpu')
 def vectorized_hadamard(a,b):
     return a*b
 
 
-@vectorize(['float32(float32, float32)'], target='cpu')
+@vectorize(['float64(float64, float64)'], target='cpu')
 def vectorized_sum(a,b):
     return a+b    
     
@@ -58,6 +58,7 @@ if __name__=="__main__":
         # Calculate the product with numpy
 
         y_numpy, t_numpy = numpy_mult(x,A)
+        y_numpy = y_numpy.squeeze() #shape to (N,)
 
         # Calculate the product with JIT
         
@@ -65,8 +66,8 @@ if __name__=="__main__":
         
         
         # Calculating the product with vectorized decorator
-        xf = x.copy().astype(np.float32).squeeze() # x is (1, N) and A is (N, N) no work so squeeze x to (N,)
-        Af = A.copy().astype(np.float32)
+        xf = x.copy().squeeze() # x is (1, N) and A is (N, N) no work so squeeze x to (N,)
+        Af = A.copy() #Dont cast to float32 
         xf = xf.reshape(N,1) #now reshape x into (N, 1) now when we multiply we get a (N, N) result
         t_start = time.time()
         Y_vector = vectorized_hadamard(xf,Af)
@@ -78,7 +79,7 @@ if __name__=="__main__":
     exec_times/=n_exp
 
     print(f'\n%%%%\nFinished execution\n')
-    if np.allclose(y_numpy,y_jit) and np.allclose(y_numpy,y_vector.astype(int)):   # Uncomment to execute
+    if np.allclose(y_numpy,y_jit) and np.allclose(y_numpy,y_vector):   # Uncomment to execute
         print(f'All the results are correct\nAverage elapsed time in milliseconds:')
         print('    Numpy: {:0.3e} '.format(exec_times[0]*1e3))
         print('    JIT: {:0.3e} '.format(exec_times[1]*1e3))
