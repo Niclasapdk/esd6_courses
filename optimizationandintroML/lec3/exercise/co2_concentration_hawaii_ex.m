@@ -30,18 +30,20 @@ data_fit = data(1:Q,:);
 
 % Data used for validation
 data_val = data(Q+1:N,:);
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % FILL IN CODE HERE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-plot(data_val.year_dec, data_val.co2_ppm)
+degree = 3;
+p = polyfit(data_fit.year, data_fit.co2_ppm, degree);
+fit_pred = polyval(p, data_fit.year);
+val_pred = polyval(p, data_val.year);
+hold on
+plot(data_val.year,val_pred, 'r-', 'LineWidth', 2)  % Fitted curve
+hold on
+plot(data.year,data.co2_ppm)
+legend('extra','original');
 grid on
-X = fitlm(data_val.year_dec,data_val.co2_ppm);
-figure;
-plotResiduals(X, 'fitted'); % Residuals vs Fitted
-title('Residuals vs Fitted Values');
-
+hold off
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % END
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
