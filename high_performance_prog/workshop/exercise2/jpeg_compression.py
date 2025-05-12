@@ -1,6 +1,6 @@
 import sys, os, time, argparse
 import numpy as np
-from numba import njit, prange
+from numba import float32, guvectorize, njit, prange
 from multiprocessing import Pool, cpu_count
 from PIL import Image
 
@@ -54,12 +54,50 @@ def jpeg_blockwise_numpy(image: np.ndarray, block_h: int, block_w: int, Q: np.nd
             out[i:i+block_h, j:j+block_w] = rec
     return np.clip(out + 128.0, 0, 255).astype(np.uint8)
 
+# --- Sequential Numba Vectorization implementation ---
+
+@guvectorize([(float32[:,:], float32[:,:], float32[:,:])], '(n,n),(n,n)->(n,n)')
+def dct2_block_vector(block, T, Y):
+    K = block.shape[0]
+    for k in range(K):
+        for l in range(K):
+            Y[k, l] = 0.0
+            for n in range(K):
+                for m in range(K):
+                    Y[k, l] += T[k, n] * block[n, m] * T[l, m]
+
+@guvectorize([(float32[:,:], float32[:,:], float32[:,:])], '(n,n),(n,n)->(n,n)')
+def idct2_block_vector(block, T, Y):
+    K = block.shape[0]
+    for k in range(K):
+        for l in range(K):
+            Y[k, l] = 0.0
+            for n in range(K):
+                for m in range(K):
+                    Y[k, l] += T[n, k] * block[n, m] * T[m, l]
+
+def jpeg_blockwise_vector(image: np.ndarray, block_h: int, block_w: int, Q: np.ndarray) -> np.ndarray:
+    X = image.astype(np.float32) - 128.0
+    H, W = X.shape
+    T_h = compute_dct_matrix(block_h)
+    out = np.zeros_like(X)
+    for i in range(0, H, block_h):
+        for j in range(0, W, block_w):
+            block = X[i:i+block_h, j:j+block_w]
+            Y = np.zeros((block_h, block_w), dtype=np.float32)
+            dct2_block_vector(block, T_h, Y)
+            Yq = np.rint(Y / Q)
+            # decompress
+            Ydq = Yq * Q
+            rec = idct2_block_vector(Ydq, T_h, Y)
+            out[i:i+block_h, j:j+block_w] = rec
+    return np.clip(out + 128.0, 0, 255).astype(np.uint8)
+
 # --- Sequential Numba JIT implementation ---
 
 @njit
-def dct2_block_numba(block, T):
+def dct2_block_numba(block, T, Y):
     K = block.shape[0]
-    Y = np.zeros((K, K), dtype=np.float32)
     for k in range(K):
         for l in range(K):
             s = 0.0
@@ -67,12 +105,10 @@ def dct2_block_numba(block, T):
                 for m in range(K):
                     s += T[k, n] * block[n, m] * T[l, m]
             Y[k, l] = s
-    return Y
 
 @njit
-def idct2_block_numba(block, T):
+def idct2_block_numba(block, T, Y):
     K = block.shape[0]
-    Y = np.zeros((K, K), dtype=np.float32)
     for k in range(K):
         for l in range(K):
             s = 0.0
@@ -80,7 +116,6 @@ def idct2_block_numba(block, T):
                 for m in range(K):
                     s += T[n, k] * block[n, m] * T[m, l]
             Y[k, l] = s
-    return Y
 
 def jpeg_blockwise_numba(image: np.ndarray, block_h: int, block_w: int, Q: np.ndarray) -> np.ndarray:
     X = image.astype(np.float32) - 128.0
@@ -90,12 +125,13 @@ def jpeg_blockwise_numba(image: np.ndarray, block_h: int, block_w: int, Q: np.nd
     for i in range(0, H, block_h):
         for j in range(0, W, block_w):
             block = X[i:i+block_h, j:j+block_w]
-            Y = dct2_block_numba(block, T_h)
+            Y = np.zeros((block_h, block_w), dtype=np.float32)
+            dct2_block_numba(block, T_h, Y)
             Yq = np.rint(Y / Q)
             # decompress
             Ydq = Yq * Q
-            rec = idct2_block_numba(Ydq, T_h)
-            out[i:i+block_h, j:j+block_w] = rec
+            idct2_block_numba(Ydq, T_h, Y)
+            out[i:i+block_h, j:j+block_w] = Y
     return np.clip(out + 128.0, 0, 255).astype(np.uint8)
 
 # --- Parallel Numba (parallel=True) implementation ---
@@ -110,11 +146,12 @@ def jpeg_blockwise_numba_parallel(X, T_h, Q, out, block_h, block_w):
             bi = bi_idx * block_h
             bj = bj_idx * block_w
             block = X[bi:bi+block_h, bj:bj+block_w]
-            Y = dct2_block_numba(block, T_h)
+            Y = np.zeros((block_h, block_w), dtype=np.float32)
+            dct2_block_numba(block, T_h, Y)
             Yq = np.rint(Y / Q)
             Ydq = Yq * Q
-            rec = idct2_block_numba(Ydq, T_h)
-            out[bi:bi+block_h, bj:bj+block_w] = rec
+            idct2_block_numba(Ydq, T_h, Y)
+            out[bi:bi+block_h, bj:bj+block_w] = Y
 
 
 def jpeg_blockwise_numba_par(image: np.ndarray, block_h: int, block_w: int, Q: np.ndarray) -> np.ndarray:
@@ -155,9 +192,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_image")
     parser.add_argument("--method",
-        choices=["numpy","numba","numba-parallel","mp"],
+        choices=["vector","numba","numba-parallel","mp"],
         required=True)
     parser.add_argument("--grid", type=int, default=1)
+    parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args()
 
     # load grayscale input
@@ -171,8 +209,9 @@ if __name__ == "__main__":
     # convert to array for processing
     arr = np.array(img, dtype=np.uint8)
     H, W = arr.shape
+    res = f"{H}x{W}"
     mapping = {
-      "numpy": jpeg_blockwise_numpy,
+      "vector": jpeg_blockwise_vector,
       "numba": jpeg_blockwise_numba,
       "numba-parallel": jpeg_blockwise_numba_par,
       "mp": jpeg_blockwise_mp,
@@ -180,6 +219,12 @@ if __name__ == "__main__":
     func = mapping[args.method]
 
     t0 = time.perf_counter()
-    rec = func(arr, 8, 8, Q8)  # or Q_exp, depending on your code
+    for r in range(args.repeat):
+        rec = func(arr, 8, 8, Q8)  # or Q_exp, depending on your code
     dt = time.perf_counter()-t0
-    print(f"{args.method},{args.grid},{dt:.4f}")
+    print(f"{args.method},{res},{dt:.4f}")
+
+    os.makedirs("output", exist_ok=True)
+    out_fname = os.path.join("output", f"{args.method}_{res}_{args.repeat}.png")
+    out_img = Image.fromarray(rec)
+    out_img.save(out_fname)
