@@ -17,5 +17,4 @@ for r in repeats:
     ax.set_xlabel("Width and Height (pixels)")
     ax.set_ylabel("Time (s)")
     ax.legend()
-    plt.show()
     plt.savefig(os.path.join("fig", f"comp_{r}.png"))
