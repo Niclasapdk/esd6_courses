@@ -18,7 +18,8 @@ with open("cold_times.csv","w", newline="") as csvfile:
                   "input.png",
                   f"--method={m}",
                   f"--grid={g}",
-                  f"--repeat={r}"
+                  f"--repeat={r}",
+                  "--quality=50"
                 ]
                 print("Running:", " ".join(cmd))
                 # run it and capture the stdout line: e.g. "numba,1024x1024,1,0.1234"
