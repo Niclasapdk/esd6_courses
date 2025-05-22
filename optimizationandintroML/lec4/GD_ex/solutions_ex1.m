@@ -6,6 +6,8 @@ Hf = @(x) [2 0; 0 2];
 max_iter = 10;
 unconstrained_opt(f,grad_f,Hf,x0,max_iter,0.01,'SD',1);
 
+
+
 %X = readtable('co2_weekly_mlo.txt');
 
 %%%first run alpha 100 NR

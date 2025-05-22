@@ -1,0 +1,36 @@
+% Assuming y is your CO₂ data (column vector)
+% Time index (or feature) and intercept for regression
+
+co2weeklymlo = import_co2_concentration("co2_weekly_mlo.txt", [50, Inf]);
+
+y = co2weeklymlo.co2_ppm;
+
+n = length(y);
+X = [ones(n,1), (1:n)'];  % intercept + linear term
+
+% Define function, gradient, and Hessian
+f = @(beta) 0.5 * norm(X*beta - y)^2;
+grad_f = @(beta) X' * (X*beta - y);
+Hf = @(beta) X' * X;
+
+% Initial guess
+x0 = zeros(size(X,2),1);  % two parameters (intercept and slope)
+%x0 = randn(size(X,2),1);
+%x0 = [mean(y); 0];
+
+% Maximum iterations
+max_iter = 100;
+
+% Try Steepest Descent
+disp('Running Steepest Descent:');
+[beta_SD, fval_SD, exitflag_SD] = unconstrained_opt(f, grad_f, Hf, x0, max_iter, 0.0001, 'SD', 2);
+
+% Try Newton-Raphson
+disp('Running Newton-Raphson:');
+[beta_NR, fval_NR, exitflag_NR] = unconstrained_opt(f, grad_f, Hf, x0, max_iter, 0.0001, 'NR', 2);
+
+
+%%%%%%%%%%NOTES!!
+%minimim points is baseline and slope ie x = [298.3255 0.0478 ]
+% linear regression model y = beta0 + beta1 * t
+% the slope matchtes    (412.53-298.3255)2427=
