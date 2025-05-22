@@ -42,13 +42,13 @@ function [xmin, fmin, x, iter] = Gauss_Newton(F, Jf, x0, max_iter, tol, stepsize
     %Defin the cost function, gradient, and hessian:
     f = @(x) sum(F(x).^2); %Sum of squares. 
 
-    grad_f = @(x) 2*Jf(x)' * F(x); % Fill in the code here
+    grad_f = @(x) 2*Jf' % Fill in the code here
 
-    Hf = @(x) 2*Jf(x)' * Jf(x);%Fill in the code here
+    Hf = @(x) %Fill in the code here
 
     % Main Optimization Loop
     for k = 1:max_iter
-            d(:,k) = inv(-Hf(x(:,k))) * grad_f(x(:,k));%Fill in the code here 
+            d(:,k) = %Fill in the code here 
         % --- Determine the Step Size ---
         switch stepsize_rule
             case 1  % Golden Section Search (GSS)
@@ -69,7 +69,7 @@ function [xmin, fmin, x, iter] = Gauss_Newton(F, Jf, x0, max_iter, tol, stepsize
         x(:, k+1) = x(:,k) + alpha(k) * d(:,k);
 
         % --- Check Convergence ---
-        if norm(alpha(k)*d(:,k)) <= tol%Fill in the condition here
+        if %Fill in the condition here
             fprintf('Convergence reached at iteration %d.\n', k);
             break;
         end
