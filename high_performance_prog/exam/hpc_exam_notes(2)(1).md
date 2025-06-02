@@ -131,7 +131,7 @@ S_p = 1 / (f + (1-f)/p)
 
 ### **Scalability Laws**
 **Amdahl's Law** (fixed problem size):
-S_p = 1 / (f + (1-f)/p)
+S_p = 1 / (f/p + (1-f))
 
 **Gustafson's Law** (scaled problem size):
 S_p = p - f(p-1) = f + p(1-f)
