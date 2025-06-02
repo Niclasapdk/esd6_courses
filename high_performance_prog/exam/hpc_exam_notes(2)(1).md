@@ -816,3 +816,58 @@ def test_thread_safe_counter():
 
 **Critical Path**: Lower bound on parallel execution time
 **Granularity Trade-off**: Task size vs overhead balance
+
+
+**Reduction VS Broadcast**
+
+- Reduction: Happens when data has been reduced by an operation.
+- Broadcast: Just send data.
+
+
+
+**Data Structures in Parallel Systems**
+1. Arrays: Cache-friendly and ideal for vectorization but static in size.
+2. Linked Lists: Efficient for dynamic memory usage but poor cache performance.
+3. Hash Tables: Fast lookups but irregular data access patterns in parallel algorithms.
+4. Graphs: High memory costs for adjacency matrix representation but useful for
+modeling complex relationships.
+
+🟢 Pleasantly Parallel
+
+Tasks can be broken into completely independent sub-tasks:
+
+    (a) Square of entries of a large array – each entry squared independently.
+
+    (c) Counting sort of a large array A – counting can be parallelized per bin, especially for large arrays.
+
+    (e) Querying a database for an entry – if queries are independent, they can be run in parallel.
+
+    (j) Summing the ages of students in a class – can be reduced via parallel sum (e.g., tree-based summing).
+
+    (g) Matrix-vector multiplication – rows can be processed independently.
+
+🟡 Somewhat Parallel
+
+Some dependencies or synchronization are required:
+
+    (i) Finding Fourier transform of a signal – FFT has recursive structure with partial dependencies.
+
+    (d) Prefix scan of an integer array – requires log-depth tree-based parallelism, not trivially parallel.
+
+    (h) Shortest path problem – some parallel algorithms exist (e.g., Δ-stepping), but not fully independent.
+
+🔴 Inherently Sequential
+
+Cannot be meaningfully parallelized due to sequential dependencies:
+
+    (b) Binary search – depends on results of prior comparisons.
+
+    (f) Computing the factorial of a large integer – multiplication is sequential unless restructured significantly.
+
+Optional Venn Overlap Notes:
+
+    Prefix scan, Fourier transform, and shortest path can sometimes be optimized with parallel techniques, so they lie in the overlap between parallel and sequential, but they're not "pleasantly parallel."
+
+    Matrix-vector multiplication is generally comfortably parallel, unless tightly coupled with other sequential algorithms.
+
+
