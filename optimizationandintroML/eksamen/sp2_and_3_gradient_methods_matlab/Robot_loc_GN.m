@@ -18,8 +18,8 @@ Jf = @(x) 2 * [
 ];%Write the jacobian
 
 max_iter = 100;
-%tol = 1e-8; %from mohhamed
-tol = 1e-2;
+tol = 1e-8; %from mohhamed
+%tol = 1e-2;
 stepsize_rule = 1;
 x0 = [0;0];
 [xmin, fmin, x, iter] = Gauss_Newton(F, Jf, x0, max_iter, tol, stepsize_rule);
